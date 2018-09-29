@@ -1,5 +1,5 @@
 ---
-- hosts: batch25
+- hosts: server
   handlers:
     - name: restart postfix
       service: name=postfix state=restarted
@@ -12,5 +12,4 @@
     - import_tasks: install_mysql_add_tables.yml
     - import_tasks: install_config_postfix.yml
     - import_tasks: install_config_dovecot.yml
-    - import_tasks: deploy_bounce_handler.yml
     - import_tasks: install_config_A_dkim_spf_tls.yml

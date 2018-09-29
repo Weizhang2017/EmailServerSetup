@@ -19,3 +19,5 @@ ansible-playbook main.yml
 > Default account: username@<domain>
 
 > Default password: 123password123
+
+> Account name and password can be changed in database dump
