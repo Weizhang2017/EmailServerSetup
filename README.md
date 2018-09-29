@@ -16,7 +16,7 @@
 ansible-playbook main.yml
 ```
 
-> Default account: username@<domain>
+> Default account: username@domain.com
 
 > Default password: 123password123
 
