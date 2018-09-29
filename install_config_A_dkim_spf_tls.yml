@@ -1,0 +1,100 @@
+---
+
+- name: install opendkim
+  apt: name={{ item }} state=present
+  with_items:
+    - opendkim
+    - opendkim-tools
+
+- name: copy config files
+  copy:
+    src: templates/{{ item }}
+    dest: /etc/
+  with_items:
+    - opendkim.conf
+
+- name: copy config files 2
+  copy:
+    src: templates/{{ item }}
+    dest: /etc/default
+  with_items:
+    - opendkim
+
+- name: config main.cf
+  lineinfile:
+    path: /etc/postfix/main.cf
+    regexp:  "{{ item.regexp }}"  
+    line: "{{ item.line }}" 
+  with_items:
+    - { regexp: '^milter_protocol', line: 'milter_protocol = 2' }
+    - { regexp: '^milter_default_action', line: 'milter_default_action = accept' }
+    - { regexp: '^smtpd_milters', line: 'smtpd_milters = inet:localhost:12301' }
+    - { regexp: '^non_smtpd_milters', line: 'non_smtpd_milters = inet:localhost:12301' }
+    - { regexp: '^smtp_tls_security_level', line: 'smtp_tls_security_level = may' }
+
+- name: create opendkim folder
+  file: path=/etc/opendkim state=directory
+  file: path=/etc/opendkim/keys state=directory
+
+- name: copy opendkim config files
+  template:
+    src: templates/{{ item }}
+    dest: /etc/opendkim/
+  with_items:
+    - TrustedHosts
+    - KeyTable
+    - SigningTable
+
+- name: create folder for public and private keys
+  file: path=/etc/opendkim/keys/{{ domain }} state=directory
+
+- name: generate public and private keys
+  shell: >
+          opendkim-genkey -s mail -d {{ domain }} 
+          --directory=/etc/opendkim/keys/{{ domain }}
+
+- name: change ownership
+  file:
+    path: /etc/opendkim/keys/{{ domain }}/mail.private
+    owner: opendkim
+    group: opendkim
+    
+- name: Slurp hosts file
+  slurp:
+    src: /etc/opendkim/keys/{{ domain }}/mail.txt
+  register: slurpfile
+  
+- debug: msg="{{ slurpfile['content'] | b64decode |regex_findall('p=.*(?=\")') | replace("[", '') | replace("]", '') |replace("\'",'') }}"
+
+- set_fact: test_var="{{ slurpfile['content'] | b64decode |regex_findall('p=.*(?=\")') | replace("[", '') | replace("]", '') | replace("\'",'') }}"
+- debug: var=test_var
+
+- name: add A record 
+  shell: >
+          curl -X PUT "https://api.godaddy.com/v1/domains/{{ domain }}/records/A/%40" 
+          -H "accept: application/json" -H "Content-Type: application/json" 
+          -H "Authorization: sso-key {{ sso_key }}"  
+          -d "[ { \"data\": \"{{ ansible_default_ipv4.address }}\", \"name\": \"@\", \"priority\": 10, \"ttl\": 600, \"type\": \"A\"}]"
+
+
+- name: add public key to domain's dns record
+  shell: >
+          curl -X PUT "https://api.godaddy.com/v1/domains/{{ domain }}/records/TXT" 
+          -H "accept: application/json" -H "Content-Type: application/json" 
+          -H "Authorization: sso-key {{ sso_key }}"  
+          -d "[ { \"data\": \"v=DKIM1; k=rsa;{{ test_var }}\", \"name\": \"mail._domainkey\", \"priority\": 10, \"ttl\": 600}]"
+  
+- name: add spf 
+  shell: >
+          curl -X PATCH "https://api.godaddy.com/v1/domains/{{ domain }}/records" 
+          -H "accept: application/json" -H "Content-Type: application/json" 
+          -H "Authorization: sso-key {{ sso_key }}"  
+          -d "[ { \"data\": \"v=spf1 a mx -all\", \"name\": \"@\", \"priority\": 10, \"ttl\": 600, \"type\": \"TXT\"}]"
+
+- name: restart opendkim
+  service:
+    name: opendkim
+    state: restarted
+    
+  notify: restart postfix
+  notify: restart dovecot

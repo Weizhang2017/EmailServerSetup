@@ -1,0 +1,9 @@
+[server]
+xxx.xx.xx.xx domain=domain.com
+
+
+[all:vars]
+ansible_ssh_user=root
+ansible_ssh_private_key_file=~/.ssh/id_rsa.xxx
+ansible_python_interpreter=/usr/bin/python3
+sso_key=<Godaddy API Key>

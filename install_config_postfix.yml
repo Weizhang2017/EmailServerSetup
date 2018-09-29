@@ -1,0 +1,33 @@
+---
+- name: update pip3 to version 9.0.0
+  shell: pip3 install --upgrade pip==9.0.0
+
+- name: install required packages for using openssl
+  pip:
+    name: pyOpenSSL
+
+- name: generate openssl cert and key
+  shell: >
+            printf '\n\n\n\n\n\n\n'|
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 
+            -keyout /etc/ssl/private/postfix.key 
+            -out /etc/ssl/certs/postfix.crt
+
+- name: install packages
+  action: >
+    {{ ansible_pkg_mgr }} name={{ item }} state=present 
+  with_items:
+    - postfix
+    - postfix-mysql
+
+- name: copy config files
+  template:
+    src: templates/{{ item }}
+    dest: /etc/postfix/
+  with_items:
+    - main.cf
+    - mysql-virtual-mailbox-domains.cf
+    - mysql-virtual-alias-maps.cf
+    - mysql-virtual-mailbox-maps.cf
+    - master.cf
+  notify: restart postfix

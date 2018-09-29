@@ -1,0 +1,80 @@
+---
+
+- name: update and upgrade package distribution
+  apt:
+    upgrade: dist
+    update_cache: yes
+
+- name: Install MySQL
+  apt: name=mysql-server state=present
+
+- name: Install packages required for ansible mysql modules on Ubuntu before 16.04
+  apt: name={{ item }} state=present
+  with_items:
+    - python-mysqldb
+  when: ansible_lsb.major_release|int < 16
+
+- name: Install packages required for ansible mysql modules on Ubuntu 16.04
+  apt: name={{ item }} state=present
+  with_items:
+    - python3-dev
+    - libmysqlclient-dev
+  when: ansible_lsb.major_release|int >= 16
+
+- name: Install Python package manager on Ubuntu 16.04
+  apt: name=python3-pip state=present
+  when: ansible_lsb.major_release|int >= 16
+
+- name: Install the Python package required for ansible MySQL modules on Ubuntu 16.04
+  pip: name=mysqlclient
+  when: ansible_lsb.major_release|int >= 16
+
+- name: Start the MySQL service
+  service: 
+    name: mysql 
+    state: started
+    enabled: true
+
+- name: update mysql root password for all root accounts
+  mysql_user: 
+    name: root 
+    host: "{{ item }}" 
+    password: '123welcome123'
+    login_user: root
+    check_implicit_admin: yes
+    priv: "*.*:ALL,GRANT"
+  with_items:
+    - 127.0.0.1
+    - ::1
+    - localhost
+
+- name: create a new database 
+  mysql_db:
+    login_user: root
+    login_password: 123password123
+    name: servermail
+    state: present
+
+- name: create a new user and assgin SELECT permission to the user
+  mysql_user:
+    login_user: root
+    login_password: 123password123
+    name: usermail
+    password: 123password123
+    host: '127.0.0.1'
+    priv: 'servermail.*:SELECT,GRANT'
+    state: present
+
+- name: copy database dump file
+  template:
+    src: templates/dump.txt
+    dest: /tmp
+
+- name: create 3 tables for virtual accounts
+  mysql_db:
+    login_user: root
+    login_password: 123password123
+    name: servermail
+    state: import
+    target: /tmp/dump.txt
+

@@ -1,0 +1,65 @@
+---
+- name: install dovecot
+  apt: name={{ item }} state=present
+  with_items:
+    - dovecot-core 
+    - dovecot-imapd
+    - dovecot-lmtpd
+    - dovecot-mysql
+    - dovecot-pop3d
+
+- name: copy config files
+  copy:
+    src: templates/{{ item }}
+    dest: /etc/dovecot/
+  with_items:
+    - dovecot.conf
+    - dovecot-sql.conf.ext
+
+- name: copy config files 2
+  copy:
+    src: templates/{{ item }}
+    dest: /etc/dovecot/conf.d/
+  with_items:
+    - auth-sql.conf.ext
+    - 10-mail.conf
+    - 10-auth.conf
+    - 10-master.conf
+    - 10-ssl.conf
+
+- name: add group
+  group:
+    name: vmail
+    gid: 5000
+    state: present
+
+- name: add user
+  user:
+    name: vmail
+    uid: 5000
+    group: vmail
+    home: /var/mail
+
+- name: Creates directory
+  file:
+    path: /var/mail/vhosts/{{ domain }} 
+    state: directory
+    owner: vmail
+    group: vmail
+
+- name: create folder for unprocessed bounce messages
+  file:
+    path: /var/mail/vhosts/{{ domain }}/marketing/unprocessed
+    state: directory
+    owner: vmail
+    group: vmail
+
+- name: change owner of /var/mail to vmail user
+  file:
+    path: /var/mail
+    owner: vmail
+    group: vmail
+    recurse: yes
+  notify: restart postfix
+  notify: restart dovecot
+

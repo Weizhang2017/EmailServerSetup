@@ -1,0 +1,16 @@
+---
+- hosts: batch25
+  handlers:
+    - name: restart postfix
+      service: name=postfix state=restarted
+    - name: restart dovecot
+      service: name=dovecot state=restarted
+    - name: restart opendkim
+      service: name=opendkim state=restarted
+
+  tasks:
+    - import_tasks: install_mysql_add_tables.yml
+    - import_tasks: install_config_postfix.yml
+    - import_tasks: install_config_dovecot.yml
+    - import_tasks: deploy_bounce_handler.yml
+    - import_tasks: install_config_A_dkim_spf_tls.yml
