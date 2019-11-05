@@ -1,0 +1,9 @@
+INSERT INTO `servermail`.`virtual_domains`
+(`id`, `name`)
+VALUES
+('2', '{{ virtual_domain }}');
+
+INSERT INTO `servermail`.`virtual_aliases`
+(`id`, `domain_id`, `source`, `destination`)
+VALUES
+('2', '2', 'marketing@{{ virtual_domain }}', 'marketing@{{ domain }}');

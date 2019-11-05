@@ -1,0 +1,22 @@
+---
+- name: add virtual domain to main.cf
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: '^virtual_alias_domains'
+    line: 'virtual_alias_domains={{ LEADBOOK_DOMAIN }}'
+    state: present
+  notify: restart postfix
+
+
+- name: copy database dump file
+  template:
+    src: templates/update_db.txt
+    dest: /tmp
+
+- name: add virtual ALIAS to mysql
+  mysql_db:
+    login_user: root
+    login_password: 123welcome123
+    name: servermail
+    state: import
+    target: /tmp/update_db.txt

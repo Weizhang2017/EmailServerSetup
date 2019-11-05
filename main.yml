@@ -13,3 +13,4 @@
     - import_tasks: install_config_postfix.yml
     - import_tasks: install_config_dovecot.yml
     - import_tasks: install_config_A_dkim_spf_tls.yml
+    - import_tasks: add_virtual_domain_virtual_ALIAS.yml

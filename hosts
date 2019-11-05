@@ -1,5 +1,5 @@
 [server]
-xxx.xx.xx.xx domain=domain.com
+xxx.xx.xx.xx domain=domain.com virtual_domain=vdomain.com
 
 
 [all:vars]
